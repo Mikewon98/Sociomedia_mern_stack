@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Box,
   Button,
@@ -31,7 +31,7 @@ const loginSchema = yup.object().shape({
   password: yup.string().required("required"),
 });
 
-const initialValueRegister = {
+const initialValuesRegister = {
   firstName: "",
   lastName: "",
   email: "",
@@ -41,7 +41,7 @@ const initialValueRegister = {
   picture: "",
 };
 
-const initialValueLogin = {
+const initialValuesLogin = {
   email: "",
   password: "",
 };
@@ -55,12 +55,58 @@ const Form = () => {
   const isLogin = pageType === "login";
   const isRegister = pageType === "register";
 
-  const handleFormSubmit = async (values, onSubmitProps) => {};
+  const register = async (values, onSubmitProps) => {
+    // this allows us to send form info with image
+    const formData = new FormData();
+    for (let value in values) {
+      formData.append(value, values[value]);
+    }
+    formData.append("picturePath", values.picture.name);
+
+    const savedUserResponse = await fetch(
+      "http://localhost:3001/auth/register",
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+    const savedUser = await savedUserResponse.json();
+    onSubmitProps.resetForm();
+
+    if (savedUser) {
+      setPageType("login");
+    }
+  };
+
+  const login = async (values, onSubmitProps) => {
+    const loggedInResponse = await fetch("http://localhost:3001/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(values),
+    });
+    const loggedIn = await loggedInResponse.json();
+    console.log(loggedIn);
+    onSubmitProps.resetForm();
+    if (loggedIn) {
+      dispatch(
+        setLogin({
+          user: loggedIn.user,
+          token: loggedIn.token,
+        })
+      );
+      navigate("/home");
+    }
+  };
+
+  const handleFormSubmit = async (values, onSubmitProps) => {
+    if (isLogin) await login(values, onSubmitProps);
+    if (isRegister) await register(values, onSubmitProps);
+  };
 
   return (
     <Formik
       onSubmit={handleFormSubmit}
-      initialValues={isLogin ? initialValueLogin : initialValueRegister}
+      initialValues={isLogin ? initialValuesLogin : initialValuesRegister}
       validationSchema={isLogin ? loginSchema : registerSchema}
     >
       {({
@@ -107,16 +153,6 @@ const Form = () => {
                   sx={{ gridColumn: "span 2" }}
                 />
                 <TextField
-                  label='Email'
-                  onBlur={handleBlur}
-                  onChange={handleChange}
-                  value={values.email}
-                  name='email'
-                  error={Boolean(touched.email) && Boolean(errors.email)}
-                  helperText={touched.email && errors.email}
-                  sx={{ gridColumn: "span 4" }}
-                />
-                <TextField
                   label='Location'
                   onBlur={handleBlur}
                   onChange={handleChange}
@@ -136,17 +172,6 @@ const Form = () => {
                     Boolean(touched.occupation) && Boolean(errors.occupation)
                   }
                   helperText={touched.occupation && errors.occupation}
-                  sx={{ gridColumn: "span 4" }}
-                />
-                <TextField
-                  label='Password'
-                  type='Password'
-                  onBlur={handleBlur}
-                  onChange={handleChange}
-                  value={values.password}
-                  name='email'
-                  error={Boolean(touched.password) && Boolean(errors.password)}
-                  helperText={touched.password && errors.password}
                   sx={{ gridColumn: "span 4" }}
                 />
                 <Box
@@ -184,6 +209,7 @@ const Form = () => {
                 </Box>
               </>
             )}
+
             <TextField
               label='Email'
               onBlur={handleBlur}
